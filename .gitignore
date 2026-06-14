@@ -3,9 +3,10 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+.vectordb/
 # C extensions
 *.so
-
+dataset/
 # Distribution / packaging
 .Python
 build/
