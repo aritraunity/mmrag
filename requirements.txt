@@ -4,3 +4,6 @@ flask
 flask-cors
 pillow
 chromadb
+langchain
+langchain-community
+langchain-ollama
