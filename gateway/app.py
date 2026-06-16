@@ -1,13 +1,25 @@
 from flask import Flask, request, jsonify
 import requests
+from flask_cors import CORS
+
 app = Flask(__name__)
 
 host = 'http://127.0.0.1'
+CORS(app)
 
 services = {
     "vision_service": f"{host}:5001/api/vision/health",
     "generation_service": f"{host}:5002/api/generation/health"
 }
+
+from flask import send_from_directory
+import os
+
+DATASET_DIR = "/home/aritra-mukherjee/projects/mmrag/dataset/various_tagged_images"
+
+@app.route("/images/<filename>")
+def serve_image(filename):
+    return send_from_directory(DATASET_DIR, filename)
 
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -31,7 +43,6 @@ def chat():
     if not query:
         return jsonify({"error": "query is required"}), 400
 
-    # Step 1 - Vision Service
     vision_result = requests.post(
         f"{host}:5001/api/vision/analyze",
         json={
@@ -40,22 +51,34 @@ def chat():
             "has_image_attachment": img is not None
         }
     )
+    vision_data = vision_result.json()
 
-    # Step 2 - Generation Service
     gen_result = requests.post(
         f"{host}:5002/api/generation/chat",
         json={
             "query": query,
-            "vision_results": vision_result.json(),
+            "vision_results": vision_data,
             "session_id": session_id
         }
     )
-
-    # Step 3 - Return to client
     gen_data = gen_result.json()
+
+    # extract matched image info from vision_data
+    matches = []
+    metadatas = vision_data.get("metadatas", [[]])[0]
+    distances = vision_data.get("distances", [[]])[0]
+    for meta, distance in zip(metadatas, distances):
+        filename = os.path.basename(meta["url"])
+        matches.append({
+            "url": f"http://127.0.0.1:5000/images/{filename}",
+            "caption": meta["caption"],
+            "similarity": round(1 - distance, 4)
+        })
+
     return jsonify({
         "message": gen_data["message"],
-        "session_id": gen_data["session_id"]
+        "session_id": gen_data["session_id"],
+        "matches": matches
     }), 200
 
 

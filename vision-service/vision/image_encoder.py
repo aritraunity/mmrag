@@ -31,6 +31,9 @@ class VisionServiceHelper:
 
         # Step 3: Initializing the tokenizer
         self.tokenizer = open_clip.get_tokenizer('ViT-B-16')
+        imgs = self.get_dataset_images('/home/aritra-mukherjee/projects/mmrag/dataset/various_tagged_images', n=100)
+
+        self.seed(imgs)
     
     def preprocess_image (self, url, verbose = False):
 
@@ -95,32 +98,23 @@ class VisionServiceHelper:
                 print(f"Found Image: {img}\n")
         return imgs [:n]
 
-    def get_llava_caption (self, image_url):
-
-        # Open Image Bytes
-        with open (image_url, "rb") as f:
-            image_bytes = f.read()
-        
-        # Encode Bytes to B64
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+    def get_llava_caption(self, image_url):
+        # open and force RGB (drops alpha channel), then re-encode as JPEG in memory
+        img = Image.open(image_url).convert("RGB")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
         response = requests.post(
             "http://localhost:11434/api/generate",
             json={
                 "model": "llava",
                 "prompt": """You are a fashion expert. Describe this fashion item in detail.
-                Include:
-                - Garment type
-                - Colors and patterns
-                - Style category (casual, formal, streetwear etc)
-                - Occasion suitability
-                - Any notable design details
-                Keep it to 3-4 sentences.""",
+                ...""",
                 "images": [base64_image],
                 "stream": False
             }
         )
-
         return response.json()["response"]
 
 

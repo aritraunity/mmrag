@@ -23,7 +23,7 @@ class ResponseGen:
 
     def get_context (self, mmrag_output):
         caption = ""
-        for text in mmrag_output.metadatas[0]:
+        for text in mmrag_output['metadatas'][0]:
             caption += text['caption']+"\n"
         return caption
 
